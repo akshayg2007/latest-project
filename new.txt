@@ -1,0 +1,18 @@
+The credibility system has been successfully updated with a new centralized backend logic and several modern conditions for score adjustments.
+
+Key Improvements:
+Centralized Utility: Created a new 
+
+credibility.ts
+ utility to manage all score changes, ensuring consistency across the application.
+New Credibility Conditions:
+Order Completion: Sellers now earn +5 points for completing a standard service or product order.
+Job/Project Completion: Successfully finishing a negotiated job (completing all milestones) awards +8 points.
+On-Time Delivery Bonus: Freelancers receive an extra +2 points if the work is delivered before the deadline.
+Product Sales: Passive sales now contribute +1 point to credibility.
+Seller Cancellation Penalty: Cancelling an active order now results in a harsher -15 point penalty to discourage ghosting.
+Refactored Existing Logic:
+Disputes: Standardized penalties for losing disputes (-15) and rewards for winning them (+5).
+Reviews: Unified 5-star (+2), 4-star (+1), and low rating (-15) adjustments.
+Moderation: Integrated penalties for content removal (posts/services/products) and false reporting.
+Automated Stat Tracking: The system now increments the completedJobs count automatically upon order/project completion.
