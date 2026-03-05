@@ -1,0 +1,58 @@
+# Negotiation Scope User Flow
+
+Below is a flow diagram representing the user journey on the **Negotiation Scope** page, based on the buttons and status logic in [ScopeClient.tsx](file:///c:/Users/atharva/Downloads/Truework-1-main%20%281%29/Truework-1-main/app/dashboard/proposals/negotiation/%5BjobId%5D/%5BapplicationId%5D/scope/ScopeClient.tsx).
+
+## Scope Action Flow
+
+```mermaid
+graph TD
+    Start["View Scope Page"] --> CheckStatus{Current Status?}
+    
+    %% Automatic Redirects
+    CheckStatus -- "Already Confirmed" --> RedirectExec["Redirect to Execution Page"]
+    CheckStatus -- "Rejected" --> ShowBanner["Show 'Rejected' Banner"]
+    
+    %% Normal Operations
+    CheckStatus -- "Pending / Change Requested" --> RoleCheck{Am I the...?}
+    
+    RoleCheck -- "Receiver (Other party's version)" --> ReceiverActions
+    RoleCheck -- "Requester (My version)" --> RequesterActions
+    RoleCheck -- "Confirmed (Waiting for other)" --> ConfirmedActions
+    
+    subgraph ReceiverActions ["Receiver Actions"]
+        RA_Accept["Accept & Proceed"] --> RA_Action1["Call confirmScope()"]
+RA_Action1 --> RA_Redirect["Redirect to EXECUTION page"]
+        RA_Counter["Counter Offer / Request Change"] --> RA_Edit["Enter Edit Mode"]
+RA_Edit --> RA_Input["Modify Scope Fields"]
+RA_Input --> RA_Submit["Submit Scope Change"]
+RA_Submit --> RA_Action2["Call submitScopeChange()"]
+RA_Action2 --> RA_Refresh["Refresh Page (New Version)"]
+    end
+    
+    subgraph RequesterActions ["Requester Actions"]
+        RQ_Reject["Reject Candidate / Withdraw Proposal"] --> RQ_Action1["Call rejectNegotiation()"]
+RQ_Action1 --> RQ_Quit["Redirect to Pipeline"]
+    end
+    
+    subgraph ConfirmedActions ["Confirmed Actions"]
+        CA_Edit["Edit Anyway"] --> RA_Edit
+        CA_Continue["Continue to Page 2"] --> RedirectExec
+    end
+
+    %% Utility Buttons
+    Start --> History["View History (Modal)"]
+    Start --> Compare["Compare Versions (Modal)"]
+    Start --> Back["Back to Pipeline (Link)"]
+```
+
+## Description of Paths
+
+- **Automatic Redirect**: If the negotiation is already `SCOPE_CONFIRMED` or further (`EXEC_PENDING`, etc.), the page `useEffect` automatically pushes the user to the Execution page.
+- **Receiver Paths**: If the user is viewing a version created by the other party, they can **Accept** (which moves them to Step 2: Execution Plan) or **Counter Offer** (which opens the editor to create a new version).
+- **Requester Paths**: If the user is the one who proposed the latest version, they are essentially waiting for the other party. They can't "accept" their own proposal, but they can **Reject/Withdraw** the entire negotiation.
+- **Confirmed Path**: If the user has already clicked "Accept", they see a banner allowing them to **Continue to Page 2** manually, or use **Edit Anyway** if they change their mind before the other party confirms.
+
+## Component Navigation
+1.  **Step 1: Scope (Current)**
+2.  **Step 2: Payment & Financial Terms** (`.../execution`)
+3.  **Step 3: Execution Plan** (`.../plan`)

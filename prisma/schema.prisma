@@ -1,0 +1,879 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  username           String             @unique
+  password           String
+  createdAt          DateTime           @default(now())
+  bio                String?
+  avatarUrl          String?
+  isOnline           Boolean            @default(true)
+  activeProfile      ProfileType        @default(BUYER)
+  role               UserRole           @default(USER)
+  onboardingComplete Boolean            @default(false)
+  banReason          String?
+  isBanned           Boolean            @default(false)
+  suspendedUntil     DateTime?
+  suspensionReason   String?
+  isShadowBanned     Boolean            @default(false)
+  balance            Int                @default(0)
+  clientProfile      ClientProfile?
+  comments           Comment[]
+  commentVotes       CommentVote[]
+  conversationsA     Conversation[]     @relation("UserA")
+  conversationsB     Conversation[]     @relation("UserB")
+  credibility        CredibilityScore?
+  raisedDisputes     Dispute[]          @relation("RaisedDisputes")
+  disputeMessages    DisputeMessage[]
+  following          Follows[]          @relation("follower")
+  followedBy         Follows[]          @relation("following")
+  freelancerProfile  FreelancerProfile?
+  hiddenPosts        HiddenPost[]
+  postedJobs         Job[]              @relation("PostedJobs")
+  jobApplications    JobApplication[]   @relation("JobApplications")
+  jobLikes           JobLike[]
+  sentMessages       Message[]
+  notifications      Notification[]
+  ordersBought       Order[]            @relation("BuyerOrders")
+  ordersSold         Order[]            @relation("SellerOrders")
+  paymentMethods     PaymentMethod[]
+  payoutAccounts     PayoutAccount[]
+  portfolioItems     PortfolioItem[]
+  portfolioLikes     PortfolioLike[]
+  posts              Post[]
+  products           Product[]
+  productLikes       ProductLike[]
+  clientProjects     Project[]          @relation("ClientProjects")
+  freelancerProjects Project[]          @relation("FreelancerProjects")
+  reports            Report[]           @relation("UserReports")
+  reviews            Review[]
+  clientReviewsGiven    ClientReview[]     @relation("ClientReviewsGiven")
+  clientReviewsReceived ClientReview[]     @relation("ClientReviewsReceived")
+  savedServices      SavedService[]
+  services           Service[]
+  serviceLikes       ServiceLike[]
+  supportMessages    SupportMessage[]
+  supportTickets     SupportTicket[]
+  transactions       Transaction[]
+  votes              Vote[]
+  clientNegotiations   Negotiation[]      @relation("ClientNegotiations")
+  freelancerNegotiations Negotiation[]    @relation("FreelancerNegotiations")
+}
+
+model PortfolioItem {
+  id        String          @id @default(uuid())
+  userId    String
+  title     String?
+  mediaUrl  String
+  mediaType String          @default("IMAGE")
+  createdAt DateTime        @default(now())
+  link      String?
+  skills    String[]
+  tools     String[]
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes     PortfolioLike[]
+}
+
+model PortfolioLike {
+  id              String        @id @default(uuid())
+  userId          String
+  portfolioItemId String
+  createdAt       DateTime      @default(now())
+  portfolioItem   PortfolioItem @relation(fields: [portfolioItemId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, portfolioItemId])
+}
+
+model HiddenPost {
+  id        String   @id @default(uuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Follows {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("follower", fields: [followerId], references: [id])
+  following   User     @relation("following", fields: [followingId], references: [id])
+
+  @@id([followerId, followingId])
+}
+
+model FreelancerProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  title          String?
+  portfolioUrl   String?
+  skills         String[]
+  tools          String[]
+  hourlyRate     String?
+  location       String?
+  visualIntroUrl String?
+  externalLinks  String[]
+  languages      Json[]
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ClientProfile {
+  id             String  @id @default(uuid())
+  userId         String  @unique
+  companyName    String?
+  isIndividual   Boolean @default(false)
+  website        String?
+  description    String?
+  location       String?
+  visualIntroUrl String?
+  languages      Json[]
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Service {
+  id               String         @id @default(uuid())
+  title            String
+  description      String
+  category         String
+  price            Int
+  deliveryTime     Int?
+  images           String[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  sellerId         String
+  paymentFrequency String?
+  pricingMethod    String         @default("ongoing")
+  revisions        String?
+  tags             String[]
+  tools            String[]
+  isRemoved        Boolean        @default(false)
+  removalReason    String?
+  paymentSteps     Json?
+  deliverables     Deliverable[]
+  faqs             FAQ[]
+  orders           Order[]
+  reviews          Review[]
+  savedBy          SavedService[]
+  seller           User           @relation(fields: [sellerId], references: [id])
+  likes            ServiceLike[]
+}
+
+model Deliverable {
+  id          String  @id @default(uuid())
+  title       String
+  description String
+  serviceId   String
+  service     Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+model FAQ {
+  id        String  @id @default(uuid())
+  question  String
+  answer    String
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+model SavedService {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serviceId])
+}
+
+model Order {
+  id                   String    @id @default(uuid())
+  price                Int
+  status               String    @default("PENDING")
+  deliveryUrl          String?
+  createdAt            DateTime  @default(now())
+  serviceId            String?
+  productId            String?
+  buyerId              String
+  sellerId             String
+  revisionDescription  String?
+  revisionDenialReason String?
+  revisionRequested    Boolean   @default(false)
+  revisionsRemaining   Int       @default(0)
+  totalRevisions       Int       @default(0)
+  deadline             DateTime?
+  disputes             Dispute[]
+  buyer                User      @relation("BuyerOrders", fields: [buyerId], references: [id])
+  product              Product?  @relation(fields: [productId], references: [id])
+  seller               User      @relation("SellerOrders", fields: [sellerId], references: [id])
+  service              Service?  @relation(fields: [serviceId], references: [id])
+  project              Project?
+  review               Review?
+  clientReview         ClientReview?       @relation("OrderClientReview")
+}
+
+model Review {
+  id                    String   @id @default(uuid())
+  rating                Int
+  ratingProfessionalism Int      @default(5)
+  ratingTimeliness      Int      @default(5)
+  ratingQualityOfWork   Int      @default(5)
+  ratingCommunication   Int      @default(5)
+  comment               String
+  createdAt             DateTime @default(now())
+  serviceId             String?
+  productId             String?
+  authorId              String
+  orderId               String   @unique
+  isRemoved             Boolean  @default(false)
+  removalReason         String?
+  author                User     @relation(fields: [authorId], references: [id])
+  order                 Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product               Product? @relation(fields: [productId], references: [id])
+  service               Service? @relation(fields: [serviceId], references: [id])
+
+  @@index([serviceId])
+  @@index([productId])
+}
+
+model ClientReview {
+  id                      String   @id @default(uuid())
+  rating                  Int
+  ratingRequirements      Int      @default(5)
+  ratingCommunication     Int      @default(5)
+  ratingCollaboration     Int      @default(5)
+  ratingPaymentPromptness Int      @default(5)
+  comment                 String
+  createdAt               DateTime @default(now())
+  authorId                String
+  orderId                 String   @unique
+  clientId                String
+  author                  User     @relation("ClientReviewsGiven", fields: [authorId], references: [id])
+  client                  User     @relation("ClientReviewsReceived", fields: [clientId], references: [id])
+  order                   Order    @relation("OrderClientReview", fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  text      String
+  link      String?
+  isRead    Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Post {
+  id            String       @id @default(cuid())
+  title         String
+  content       String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  authorId      String
+  tags          String[]
+  mediaUrl      String?
+  postType      String       @default("TEXT")
+  isRemoved     Boolean      @default(false)
+  removalReason String?
+  comments      Comment[]
+  hiddenBy      HiddenPost[]
+  author        User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes         Vote[]
+}
+
+model Comment {
+  id            String        @id @default(cuid())
+  text          String
+  createdAt     DateTime      @default(now())
+  authorId      String
+  postId        String
+  parentId      String?
+  isRemoved     Boolean       @default(false)
+  removalReason String?
+  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent        Comment?      @relation("CommentToComment", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies       Comment[]     @relation("CommentToComment")
+  post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  votes         CommentVote[]
+}
+
+model CommentVote {
+  id        String   @id @default(cuid())
+  type      VoteType
+  userId    String
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+}
+
+model Vote {
+  id     String   @id @default(cuid())
+  type   VoteType
+  userId String
+  postId String
+  post   Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Conversation {
+  id          String             @id @default(uuid())
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  userAId     String
+  userBId     String
+  status      ConversationStatus @default(PENDING)
+  initiatorId String?
+  userA       User               @relation("UserA", fields: [userAId], references: [id])
+  userB       User               @relation("UserB", fields: [userBId], references: [id])
+  messages    Message[]
+
+  @@unique([userAId, userBId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  text           String
+  createdAt      DateTime     @default(now())
+  conversationId String
+  senderId       String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id])
+}
+
+model Job {
+  id              String           @id @default(uuid())
+  title           String
+  description     String
+  category        String
+  budget          Float            @default(0)
+  budgetType      BudgetType       @default(FIXED)
+  skills          String[]
+  deadline        DateTime?
+  status          JobStatus        @default(OPEN)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  isRemoved       Boolean          @default(false)
+  removalReason   String?
+  clientId        String
+  experienceLevel String?
+  maxBudget       Float?
+  maxProposals    Int?
+  minBudget       Float?
+  timeline        String?
+  objective       String?
+  deliverables    String[]
+  tasksIncluded   String[]
+  paymentStructure String?
+  advancePercentage Int?
+  paymentTimeline  String?
+  paymentMethods   String[]
+  proposedMilestones Json?
+  hourlyRateMin    Float?
+  hourlyRateMax    Float?
+  maxHoursPerWeek  Int?
+  estimatedTotalHours Int?
+  paymentFrequency String?
+  hourApprovalMethod String?
+  expectedStartDate  DateTime?
+  deadlineFlexible  Boolean          @default(false)
+  urgencyLevel      String?
+  client          User             @relation("PostedJobs", fields: [clientId], references: [id], onDelete: Cascade)
+  applications    JobApplication[]
+  likes           JobLike[]
+  negotiations    Negotiation[]
+}
+
+model JobApplication {
+  id             String            @id @default(uuid())
+  coverLetter    String
+  proposedBudget Float
+  estimatedDays  Int
+  status         ApplicationStatus @default(PENDING)
+  isRead         Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  jobId          String
+  freelancerId   String
+  freelancer     User              @relation("JobApplications", fields: [freelancerId], references: [id], onDelete: Cascade)
+  job            Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, freelancerId])
+  negotiation    Negotiation?
+  revisions      Int               @default(0)
+}
+
+model Negotiation {
+  id                   String              @id @default(uuid())
+  applicationId        String              @unique
+  jobId                String
+  clientId             String
+  freelancerId         String
+  status               NegotiationStatus   @default(SCOPE_PENDING)
+  scopeConfirmedByClient     Boolean       @default(false)
+  scopeConfirmedByFreelancer Boolean       @default(false)
+  execConfirmedByClient      Boolean       @default(false)
+  execConfirmedByFreelancer  Boolean       @default(false)
+  rejectionReason      String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  application          JobApplication      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  job                  Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  client               User                @relation("ClientNegotiations", fields: [clientId], references: [id])
+  freelancer           User                @relation("FreelancerNegotiations", fields: [freelancerId], references: [id])
+  scopeVersions        NegotiationScopeVersion[]
+  executionVersions    NegotiationExecutionVersion[]
+}
+
+model NegotiationScopeVersion {
+  id              String      @id @default(uuid())
+  negotiationId   String
+  versionNumber   Int
+  createdBy       String      // 'client' or 'freelancer'
+  objective       String
+  deliverables    String[]
+  tasksIncluded   String[]
+  changeReason    String?
+  revisions       Int         @default(3)
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  negotiation     Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+}
+
+model NegotiationExecutionVersion {
+  id                 String      @id @default(uuid())
+  negotiationId      String
+  versionNumber      Int
+  createdBy          String      // 'client' or 'freelancer'
+  startDate          DateTime?
+  deadline           DateTime?
+  finalBudget        Float
+  paymentStructure   String      @default("full") // 'full' | 'advance' | 'milestone'
+  advancePercent     Int         @default(0)
+  paymentTimeline    String      @default("7days")
+  hourlyRate         Float?
+  maxHoursPerWeek    Int?
+  estimatedHours     Int?
+  paymentFrequency   String?
+  hourApprovalMethod String?
+  milestones         NegotiationMilestone[]
+  phases             Json        @default("[]")
+  changeReason       String?
+  isActive           Boolean     @default(true)
+  createdAt          DateTime    @default(now())
+  negotiation        Negotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+}
+
+model NegotiationMilestone {
+  id                String                      @id @default(uuid())
+  executionVersionId String
+  name              String
+  amount            Float
+  deliveryDate      DateTime?
+  releaseCondition  String?
+  executionVersion  NegotiationExecutionVersion @relation(fields: [executionVersionId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id               String        @id @default(uuid())
+  title            String
+  description      String?
+  budget           Int
+  deadline         DateTime?
+  status           ProjectStatus @default(ACTIVE)
+  progress         Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  orderId          String?       @unique
+  clientId         String
+  freelancerId     String
+  clientAgreed     Boolean       @default(false)
+  freelancerAgreed Boolean       @default(false)
+  agreementContent String?
+  disputes         Dispute[]
+  milestones       Milestone[]
+  client           User          @relation("ClientProjects", fields: [clientId], references: [id])
+  freelancer       User          @relation("FreelancerProjects", fields: [freelancerId], references: [id])
+  order            Order?        @relation(fields: [orderId], references: [id])
+  transactions     Transaction[]
+}
+
+model Milestone {
+  id                   String          @id @default(uuid())
+  title                String
+  description          String?
+  amount               Int
+  dueDate              DateTime?
+  status               MilestoneStatus @default(PENDING)
+  createdAt            DateTime        @default(now())
+  projectId            String
+  escrowAmount         Int             @default(0)
+  deliveryUrl          String?
+  submittedAt          DateTime?
+  revisionDescription  String?
+  revisionDenialReason String?
+  project              Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  transactions         Transaction[]
+}
+
+model Dispute {
+  id         String           @id @default(uuid())
+  reason     String
+  status     DisputeStatus    @default(OPEN)
+  resolution String?
+  decision   String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  projectId  String?
+  orderId    String?
+  raisedById String
+  order      Order?           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  project    Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  raisedBy   User             @relation("RaisedDisputes", fields: [raisedById], references: [id])
+  messages   DisputeMessage[]
+}
+
+model DisputeMessage {
+  id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now())
+  senderId  String
+  disputeId String
+  dispute   Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id])
+}
+
+model CredibilityScore {
+  id             String    @id @default(uuid())
+  score          Int       @default(50)
+  completedJobs  Int       @default(0)
+  onTimeDelivery Int       @default(95)
+  responseRate   Int       @default(90)
+  repeatClients  Int       @default(0)
+  isVerified     Boolean   @default(false)
+  verifiedAt     DateTime?
+  updatedAt      DateTime  @updatedAt
+  userId         String    @unique
+  completionRate Int       @default(100)
+  badges         Badge[]
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Badge {
+  id            String           @id @default(uuid())
+  type          BadgeType
+  earnedAt      DateTime         @default(now())
+  credibilityId String
+  name          String
+  credibility   CredibilityScore @relation(fields: [credibilityId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id            String        @id @default(uuid())
+  name          String
+  description   String
+  category      String
+  price         Int
+  images        String[]
+  tags          String[]
+  license       LicenseType   @default(PERSONAL)
+  fileUrls      String[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  isRemoved     Boolean       @default(false)
+  removalReason String?
+  sellerId      String
+  orders        Order[]
+  seller        User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  likes         ProductLike[]
+  reviews       Review[]
+}
+
+model ProductLike {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model ServiceLike {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serviceId])
+}
+
+model JobLike {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  userId    String
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+}
+
+model PaymentMethod {
+  id               String   @id @default(uuid())
+  type             String
+  identifier       String
+  maskedIdentifier String
+  holderName       String?
+  isDefault        Boolean  @default(false)
+  status           String   @default("verified")
+  bankName         String?
+  cardNetwork      String?
+  walletProvider   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PayoutAccount {
+  id            String   @id @default(uuid())
+  type          String
+  identifier    String
+  holderName    String
+  isPrimary     Boolean  @default(false)
+  status        String   @default("verified")
+  bankName      String?
+  accountNumber String?
+  ifsc          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id         String       @id @default(uuid())
+  reporterId String
+  targetId   String
+  targetType ReportType
+  reason     String
+  details    String?
+  status     ReportStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  reporter   User         @relation("UserReports", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([targetId])
+  @@index([targetType])
+}
+
+model SupportTicket {
+  id          String           @id @default(uuid())
+  userId      String
+  category    String
+  subcategory String?
+  subject     String
+  description String
+  priority    TicketPriority   @default(MEDIUM)
+  status      TicketStatus     @default(OPEN)
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  messages    SupportMessage[]
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SupportMessage {
+  id        String        @id @default(uuid())
+  text      String
+  createdAt DateTime      @default(now())
+  senderId  String
+  ticketId  String
+  sender    User          @relation(fields: [senderId], references: [id])
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id          String            @id @default(uuid())
+  amount      Int
+  type        TransactionType
+  status      TransactionStatus @default(COMPLETED)
+  description String?
+  createdAt   DateTime          @default(now())
+  userId      String
+  projectId   String?
+  milestoneId String?
+  milestone   Milestone?        @relation(fields: [milestoneId], references: [id])
+  project     Project?          @relation(fields: [projectId], references: [id])
+  user        User              @relation(fields: [userId], references: [id])
+}
+
+model AdminAuditLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  adminName  String
+  action     String
+  targetType String?
+  targetId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([createdAt])
+}
+
+enum ConversationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ProfileType {
+  BUYER
+  SELLER
+}
+
+enum VoteType {
+  UP
+  DOWN
+}
+
+enum JobStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum BudgetType {
+  FIXED
+  HOURLY
+}
+
+enum ApplicationStatus {
+  PENDING
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ProjectStatus {
+  AGREEMENT_PENDING
+  ACTIVE
+  IN_REVIEW
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REVISION_REQUESTED
+  IN_REVISION
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum BadgeType {
+  TOP_RATED
+  RISING_TALENT
+  VERIFIED_ID
+  FAST_RESPONDER
+  ON_TIME_DELIVERY
+  REPEAT_CLIENT_FAVORITE
+}
+
+enum LicenseType {
+  PERSONAL
+  COMMERCIAL
+}
+
+enum ReportType {
+  POST
+  SERVICE
+  PRODUCT
+  JOB
+  COMMENT
+  USER
+  MESSAGE
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  ESCROW_FUNDING
+  MILESTONE_RELEASE
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum NegotiationStatus {
+  SCOPE_PENDING
+  SCOPE_CHANGE_REQUESTED
+  SCOPE_CONFIRMED
+  EXEC_PENDING
+  EXEC_COUNTER_SENT
+  EXEC_WAITING_CONFIRMATION
+  CONFIRMED
+  REJECTED
+}
